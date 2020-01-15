@@ -13,7 +13,11 @@ And, if necessary, the optional environment variables:
     * Options: See the Cloud Conformity [documentation](https://github.com/cloudconformity/documentation-api#endpoints)
   * `CC_RISK_LEVEL` (default: `LOW`)
     * Options: `LOW` | `MEDIUM` | `HIGH` | `VERY_HIGH` | `EXTREME`
-    
+
+## Examples
+
+See the [Cloud Conformity Pipeline Demos](https://github.com/OzNetNerd/Cloud-Conformity-Pipeline-Demos) repo for example pipelines.
+
 # Contact
 
 * Blog: oznetnerd.com
