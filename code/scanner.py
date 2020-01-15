@@ -1,10 +1,10 @@
 """
-To use the script, specify the following required environment variables:
+Requires environment variables:
   * CC_API_KEY
   * CC_REGION
   * CFN_TEMPLATE_FILE_LOCATION
 
-And, if necessary, the optional environment variable:
+Optional environment variable:
   * CC_RISK_LEVEL (default: LOW)
 """
 
@@ -12,6 +12,8 @@ import requests
 import json
 import os
 import sys
+
+OUTPUT_FILE = 'findings.json'
 
 CC_REGIONS = [
     'eu-west-1',
@@ -55,21 +57,17 @@ class CcValidator:
               f'issues are found')
 
     def generate_payload(self):
-        try:
-            with open(self.cfn_template_file_location, 'r') as f:
-                cfn_contents = f.read()
+        with open(self.cfn_template_file_location, 'r') as f:
+            cfn_contents = f.read()
 
-                payload = {
-                    'data': {
-                        'attributes': {
-                            'type': 'cloudformation-template',
-                            'contents': cfn_contents
-                        }
+            payload = {
+                'data': {
+                    'attributes': {
+                        'type': 'cloudformation-template',
+                        'contents': cfn_contents
                     }
                 }
-
-        except FileNotFoundError as e:
-            sys.exit(f'Error: {e}')
+            }
 
         return payload
 
@@ -91,7 +89,7 @@ class CcValidator:
 
         return resp_json
 
-    def check_results(self, findings):
+    def get_results(self, findings):
         offending_entries = []
 
         for entry in findings['data']:
@@ -101,6 +99,10 @@ class CcValidator:
             if risk_level_num >= self.offending_risk_level_num:
                 offending_entries.append(entry)
 
+        if offending_entries:
+            with open(OUTPUT_FILE, 'w') as f:
+                json.dump(offending_entries, f)
+
         return offending_entries
 
 
@@ -108,7 +110,7 @@ def main():
     cc = CcValidator()
     payload = cc.generate_payload()
     findings = cc.run_validation(payload)
-    offending_entries = cc.check_results(findings)
+    offending_entries = cc.get_results(findings)
 
     if not offending_entries:
         print('\nNo offending entries found')
