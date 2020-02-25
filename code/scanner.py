@@ -112,9 +112,14 @@ class CcValidator:
             if risk_level_num >= self.offending_risk_level_num:
                 offending_entries.append(entry)
 
-        if offending_entries:
-            with open(OUTPUT_FILE, 'w') as f:
-                json.dump(offending_entries, f)
+        if not offending_entries:
+            return
+
+        formatted_output = json.dumps(offending_entries, sort_keys=True, indent=4)
+        output = (formatted_output.replace(r'\"', ''))
+
+        with open(OUTPUT_FILE, 'w') as f:
+            f.write(output)
 
         return offending_entries
 

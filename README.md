@@ -7,10 +7,10 @@ Pipeline scanner uses Cloud Conformity's [Template Scanner](https://www.cloudcon
 To use the script, specify the following required environment variables:
   * `CC_API_KEY`
   * `CFN_TEMPLATE_FILE_LOCATION`
-
-And, if necessary, the optional environment variables:
-  * `CC_REGION` (default: `us-west-2`)
+  * `CC_REGION`
     * Options: See the Cloud Conformity [documentation](https://github.com/cloudconformity/documentation-api#endpoints)
+
+And, if necessary, the optional environment variable:
   * `CC_RISK_LEVEL` (default: `LOW`)
     * Options: `LOW` | `MEDIUM` | `HIGH` | `VERY_HIGH` | `EXTREME`
 
