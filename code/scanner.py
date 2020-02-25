@@ -38,25 +38,32 @@ class CcValidator:
             self.cc_region = os.environ['CC_REGION'].lower()
 
             if self.cc_region not in CC_REGIONS:
-                sys.exit('Error: Please ensure "CC_REGIONS" is set to a region which is supported by Cloud Conformity')
+                print('Error: Please ensure "CC_REGIONS" is set to a region which is supported by Cloud Conformity')
+                sys.exit(1)
 
             self.api_key = os.environ['CC_API_KEY']
             self.cfn_template_file_location = os.environ['CFN_TEMPLATE_FILE_LOCATION']
             risk_level = os.getenv('CC_RISK_LEVEL', 'LOW').upper()
 
         except KeyError:
-            sys.exit('Error: Please ensure all environment variables are set')
+            print('Error: Please ensure all environment variables are set')
+            sys.exit(1)
 
         try:
             self.offending_risk_level_num = RISK_LEVEL_NUMS[risk_level]
 
         except KeyError:
-            sys.exit('Error: Unknown risk level. Please use one of LOW | MEDIUM | HIGH | VERY_HIGH | EXTREME')
+            print('Error: Unknown risk level. Please use one of LOW | MEDIUM | HIGH | VERY_HIGH | EXTREME')
+            sys.exit(1)
 
         print(f'All environment variables were received. The pipeline will fail if any "{risk_level}" level '
               f'issues are found')
 
     def generate_payload(self):
+        if not os.path.isfile(self.cfn_template_file_location):
+            print(f'Error: Template file does not exist: {self.cfn_template_file_location}')
+            sys.exit(1)
+
         with open(self.cfn_template_file_location, 'r') as f:
             cfn_contents = f.read()
 
