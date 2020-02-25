@@ -35,7 +35,7 @@ class CcValidator:
 
         try:
             print('Obtaining required environment variables...')
-            self.cc_region = os.getenv('CC_REGION', 'us-west-2').lower()
+            self.cc_region = os.environ['CC_REGION'].lower()
 
             if self.cc_region not in CC_REGIONS:
                 sys.exit('Error: Please ensure "CC_REGIONS" is set to a region which is supported by Cloud Conformity')
