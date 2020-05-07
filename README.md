@@ -20,5 +20,5 @@ See the [Cloud Conformity Pipeline Demos](https://github.com/OzNetNerd/Cloud-Con
 
 # Contact
 
-* Blog: oznetnerd.com
+* Blog: [oznetnerd.com](https://oznetnerd.com)
 * Email: will@oznetnerd.com
