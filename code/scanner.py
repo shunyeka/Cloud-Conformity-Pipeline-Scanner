@@ -106,7 +106,12 @@ class CcValidator:
         offending_entries = []
 
         for entry in findings['data']:
-            risk_level_text = entry['attributes']['risk-level']
+            attributes = entry['attributes']
+
+            if entry['attributes']['status'] == 'SUCCESS':
+                continue
+
+            risk_level_text = attributes['risk-level']
             risk_level_num = RISK_LEVEL_NUMS[risk_level_text]
 
             if risk_level_num >= self.offending_risk_level_num:
