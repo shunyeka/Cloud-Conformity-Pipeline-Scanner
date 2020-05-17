@@ -7,65 +7,55 @@ Parameters:
     Default: 0.0.0.0/0
     Description: "CIDR address for security group"
 
-  TagKey:
-    Type: String
-    Default: Name
-
-  TagValue:
-    Type: String
-    Default: "Cloud Conformity demo environment"
-
   AmiId:
     Type: AWS::EC2::Image::Id
-    Description: Linux2 AMI
+    Description: "Linux2 AMI"
 
   VpcCidr:
     Type: String
-    Description: VPC CIDR
-    Default: 10.0.0.0/16
+    Description: "VPC CIDR"
+    Default: "10.0.0.0/16"
 
   PublicSubnetCidr:
     Type: String
-    Description: Public subnet
-    Default: 10.0.0.0/24
+    Description: "Public subnet"
+    Default: "10.0.0.0/24"
 
   Ec2KeyName:
     Type: AWS::EC2::KeyPair::KeyName
-    Description: >-
-      Name of an existing EC2 KeyPair to enable SSH access to the instances
+    Description: "SSH access to the instances"
 
   InstanceType:
-    Description: EC2 instance type
     Type: String
-    Default: t2.small
+    Default: "t2.small"
 
 Resources:
   Vpc:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: !Ref VpcCidr
-      EnableDnsHostnames: true
-      EnableDnsSupport: true
+      EnableDnsHostnames: "true"
+      EnableDnsSupport: "true"
       Tags:
-        - Key: !Ref TagKey
-          Value: !Ref TagValue
+        - Key: "Name"
+          Value: "Dev VPC"
 
   PublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: !Ref PublicSubnetCidr
-      MapPublicIpOnLaunch: true
+      MapPublicIpOnLaunch: "true"
       VpcId: !Ref Vpc
       Tags:
-        - Key: !Ref TagKey
-          Value: !Ref TagValue
+        - Key: "Name"
+          Value: "Public Subnet"
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
-        - Key: !Ref TagKey
-          Value: !Ref TagValue
+        - Key: "Name"
+          Value: "Internet Gateway"
 
   VpcGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -80,7 +70,7 @@ Resources:
 
   InternetRoute:
     Type: AWS::EC2::Route
-    DependsOn: VpcGatewayAttachment
+    DependsOn: "VpcGatewayAttachment"
     Properties:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
@@ -92,32 +82,32 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet
 
-  Ec2Instance:
+  WebServer:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref AmiId
       KeyName: !Ref Ec2KeyName
       SubnetId: !Ref PublicSubnet
-      InstanceType: t2.medium
+      InstanceType: !Ref InstanceType
       SecurityGroupIds:
-        - !Ref Ec2InstanceSecurityGroup
+        - !Ref WebServerSecurityGroup
       Tags:
-        - Key: Name
-          Value: GitLab
+        - Key: "Name"
+          Value: "WebServer"
 
-  Ec2InstanceSecurityGroup:
+  WebServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: !Sub "${TagValue}"
-      GroupDescription: !Sub "SG for ${TagValue}"
+      GroupName: "WebSg"
+      GroupDescription: "Web Server Security Group"
       SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 22
-        ToPort: 22
+      - IpProtocol: "tcp"
+        FromPort: "22"
+        ToPort: "22"
       VpcId: !Ref Vpc
 
 Outputs:
-  Ec2InstanceHostname:
-    Value: !GetAtt Ec2Instance.PublicDnsName
+  WebServerHostname:
+    Value: !GetAtt WebServer.PublicDnsName
     Export:
-      Name: !Sub "${AWS::StackName}-instance"
+      Name: !Sub "${AWS::StackName}-WebServer"
