@@ -38,7 +38,7 @@ class CcValidator:
             self.cc_region = os.environ['CC_REGION'].lower()
 
             if self.cc_region not in CC_REGIONS:
-                print('\nError: Please ensure "CC_REGIONS" is set to a region which is supported by Cloud Conformity')
+                print('\nError: Please ensure "CC_REGION" is set to a region which is supported by Cloud Conformity')
                 sys.exit(1)
 
             self.api_key = os.environ['CC_API_KEY']
@@ -104,6 +104,10 @@ class CcValidator:
 
     def get_results(self, findings):
         offending_entries = []
+
+        if findings.get('errors'):
+            print(f"Error: {findings['errors']}")
+            sys.exit(1)
 
         for entry in findings['data']:
             attributes = entry['attributes']
