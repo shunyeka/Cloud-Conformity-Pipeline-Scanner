@@ -1,0 +1,60 @@
+---
+Resources:
+  MyS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: demo-bucket
+      LoggingConfiguration:
+        DestinationBucketName: demo-log-bucket
+        LogFilePrefix: demo
+      AccelerateConfiguration:
+        AccelerationStatus: Enabled
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      Tags:
+      - Key: Name
+        Value: MyS3Bucket
+
+  SecureBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref MyS3Bucket
+      PolicyDocument:
+        Statement:
+          - Action: s3:PutObject
+            Effect: "Deny"
+            Resource: !Sub "arn:aws:s3:::${MyS3Bucket}/*"
+            Principal: "*"
+            Condition:
+              StringNotEquals:
+                s3:x-amz-server-side-encryption: AES256
+          - Action: s3:PutObject
+            Effect: "Deny"
+            Resource: !Sub "arn:aws:s3:::${MyS3Bucket}/*"
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+          - Action: s3:PutObject
+            Effect: "Deny"
+            Resource: !Sub "arn:aws:s3:::${MyS3Bucket}/*"
+            Principal: "*"
+            Condition:
+              "Null":
+                s3:x-amz-server-side-encryption: "true"
+          - Effect: Deny
+            Principal:
+              AWS: "*"
+            Action: s3:*
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+            Resource: !Sub "arn:aws:s3:::${MyS3Bucket}/*"
+          - Action: s3:*
+            Effect: Allow
+            Resource: !Sub "arn:aws:s3:::${MyS3Bucket}/*"
+            Principal:
+              AWS:
+              - !Sub arn:aws:iam::${AWS::AccountId}:root
