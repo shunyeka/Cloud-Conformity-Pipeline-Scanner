@@ -6,6 +6,7 @@ Requires environment variables:
 
 Optional environment variable:
   * CC_RISK_LEVEL (default: LOW)
+  * PIPELINE_FAIL (default: '')
 """
 
 import requests
@@ -134,6 +135,7 @@ class CcValidator:
 
 
 def main():
+
     cc = CcValidator()
     payload = cc.generate_payload()
     findings = cc.run_validation(payload)
@@ -143,11 +145,17 @@ def main():
         print('\nNo offending entries found')
         sys.exit()
 
+    fail_pipeline = False if os.environ.get('FAIL_PIPELINE', '').lower() == 'disabled' else True
     num_offending_entries = len(offending_entries)
     json_offending_entries = json.dumps(offending_entries, indent=4, sort_keys=True)
     print(f'Offending entries:\n{json_offending_entries}')
-    print(f'\nError: {num_offending_entries} offending entries found')
-    sys.exit(1)
+
+    if fail_pipeline:
+        sys.exit(f'Error: {num_offending_entries} offending entries found')
+
+    else:
+        print(f'{num_offending_entries} offending entries found. "FAIL_PIPELINE" is DISABLED so exit code will be 0.')
+        sys.exit()
 
 
 if __name__ == '__main__':

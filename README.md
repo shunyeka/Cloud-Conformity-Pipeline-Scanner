@@ -13,6 +13,8 @@ To use the script, specify the following required environment variables:
 And, if necessary, the optional environment variable:
   * `CC_RISK_LEVEL` (default: `LOW`)
     * Options: `LOW` | `MEDIUM` | `HIGH` | `VERY_HIGH` | `EXTREME`
+  * `FAIL_PIPELINE` (default: pipeline will fail)
+    * Options: `disabled`
 
 ## Examples
 
