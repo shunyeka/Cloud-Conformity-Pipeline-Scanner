@@ -1,18 +1,8 @@
-"""
-Requires environment variables:
-  * CC_API_KEY
-  * CC_REGION
-  * CFN_TEMPLATE_FILE_LOCATION
-
-Optional environment variable:
-  * CC_RISK_LEVEL (default: LOW)
-  * PIPELINE_FAIL (default: '')
-"""
-
-import requests
-import json
 import os
 import sys
+import requests
+import json
+import yaml
 
 OUTPUT_FILE = 'findings.json'
 
@@ -60,7 +50,10 @@ class CcValidator:
         print(f'All environment variables were received. The pipeline will fail if any "{risk_level}" level '
               f'issues are found')
 
-    def generate_payload(self):
+        self.cfn_contents = self.read_template_file()
+        self.fail_pipeline = self._fail_pipeline()
+
+    def read_template_file(self):
         if not os.path.isfile(self.cfn_template_file_location):
             print(f'\nError: Template file does not exist: {self.cfn_template_file_location}')
             sys.exit(1)
@@ -68,14 +61,17 @@ class CcValidator:
         with open(self.cfn_template_file_location, 'r') as f:
             cfn_contents = f.read()
 
-            payload = {
-                'data': {
-                    'attributes': {
-                        'type': 'cloudformation-template',
-                        'contents': cfn_contents
-                    }
+        return cfn_contents
+
+    def generate_payload(self):
+        payload = {
+            'data': {
+                'attributes': {
+                    'type': 'cloudformation-template',
+                    'contents': self.cfn_contents
                 }
             }
+        }
 
         return payload
 
@@ -92,7 +88,7 @@ class CcValidator:
 
         resp = requests.post(cfn_scan_endpoint, headers=headers, data=json_output)
         resp_json = json.loads(resp.text)
-        json_output = json.dumps(resp_json, indent=4, sort_keys=True)
+        # json_output = json.dumps(resp_json, indent=4, sort_keys=True)
         # print(f'Received the following response:\n{json_output}')
 
         message = resp_json.get('Message')
@@ -133,29 +129,85 @@ class CcValidator:
 
         return offending_entries
 
+    @staticmethod
+    def _check_fail_pipeline(template):
+        try:
+            fail_pipeline_setting = template['Parameters']['FailConformityPipeline']
+
+        except TypeError:
+            print('The "FailConformityPipeline" parameter has not been set. The pipeline will fail if the template is '
+                  'deemed insecure.')
+
+            return True
+
+        if fail_pipeline_setting.lower() == 'disabled':
+            print('The "FailConformityPipeline" parameter has been set to "disabled". The pipeline will not fail even '
+                  'if the template is deemed insecure.')
+
+            return False
+
+        else:
+            print('The "FailConformityPipeline" parameter was not set to "disabled". The pipeline will not fail even '
+                  'if the template is deemed insecure.')
+
+            return True
+
+    def _fail_pipeline(self):
+        if os.environ.get('FAIL_PIPELINE', '').lower() == 'disabled':
+            print('The "FAIL_PIPELINE" environment variable is set to "disabled". The pipeline will not fail even if '
+                  'the template is deemed insecure.')
+            return False
+
+        # fail pipeline if  `FAIL_PIPELINE_CFN` is not set
+        if not os.environ.get('FAIL_PIPELINE_CFN', '').lower() == 'enabled':
+            return True
+
+        print('The "FAIL_PIPELINE_CFN" environment variable is set to "enabled". The template will be checked to see '
+              'if the pipeline should fail.')
+
+        template_extension = os.path.splitext(self.cfn_template_file_location)[1]
+
+        if template_extension.lower() == '.json':
+            dict_template = json.loads(self.cfn_contents)
+            fail_pipeline = self._check_fail_pipeline(dict_template)
+
+            return fail_pipeline
+
+        elif template_extension.lower() == '.yaml' or template_extension.lower() == '.yml':
+            dict_template = yaml.safe_load(self.cfn_contents)
+            fail_pipeline = self._check_fail_pipeline(dict_template)
+
+            return fail_pipeline
+
+        else:
+            sys.exit(f'Unknown file extension for template: {template_extension}')
+
+    def run(self):
+        payload = self.generate_payload()
+        findings = self.run_validation(payload)
+        offending_entries = self.get_results(findings)
+
+        if not offending_entries:
+            print('\nNo offending entries found')
+            sys.exit()
+
+        num_offending_entries = len(offending_entries)
+        json_offending_entries = json.dumps(offending_entries, indent=4, sort_keys=True)
+        print(f'Offending entries:\n{json_offending_entries}')
+
+        if self.fail_pipeline:
+            sys.exit(f'Error: {num_offending_entries} offending entries found')
+
+        else:
+            print(
+                f'\nPipeline failure has been disabled so the script will exit with a 0 code.\n'
+                f'{num_offending_entries} offending entries found.')
+            sys.exit()
+
 
 def main():
-
     cc = CcValidator()
-    payload = cc.generate_payload()
-    findings = cc.run_validation(payload)
-    offending_entries = cc.get_results(findings)
-
-    if not offending_entries:
-        print('\nNo offending entries found')
-        sys.exit()
-
-    fail_pipeline = False if os.environ.get('FAIL_PIPELINE', '').lower() == 'disabled' else True
-    num_offending_entries = len(offending_entries)
-    json_offending_entries = json.dumps(offending_entries, indent=4, sort_keys=True)
-    print(f'Offending entries:\n{json_offending_entries}')
-
-    if fail_pipeline:
-        sys.exit(f'Error: {num_offending_entries} offending entries found')
-
-    else:
-        print(f'{num_offending_entries} offending entries found. "FAIL_PIPELINE" is DISABLED so exit code will be 0.')
-        sys.exit()
+    cc.run()
 
 
 if __name__ == '__main__':

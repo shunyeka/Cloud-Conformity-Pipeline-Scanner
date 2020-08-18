@@ -15,10 +15,51 @@ And, if necessary, the optional environment variable:
     * Options: `LOW` | `MEDIUM` | `HIGH` | `VERY_HIGH` | `EXTREME`
   * `FAIL_PIPELINE` (default: pipeline will fail)
     * Options: `disabled`
+  * `FAIL_PIPELINE_CFN` (default: pipeline will fail)
+    * Options: `enabled`
+
+If `FAIL_PIPELINE` is `disabled`, the script **will not** fail the pipeline even if the template is deemed insecure. 
+
+If `FAIL_PIPELINE_CFN` is `enabled`, the script will look for the `FailConformityPipeline` parameter in the template. If the parameter is set to `disabled`, the pipeline **will not** fail even if the template is deemed insecure. See `insecure-s3-bucket-disable-failure.yaml` or `insecure-s3-bucket-disable-failure.json` for examples.
 
 ## Examples
+### Default
 
-See the [Cloud Conformity Pipeline Demos](https://github.com/OzNetNerd/Cloud-Conformity-Pipeline-Demos) repo for example pipelines.
+An example of the pipeline scanner being run with its default settings. If Conformity finds any LOW severity issues or above, the pipeline will fail. 
+
+```
+export CC_REGION=ap-southeast-2
+export CC_API_KEY=<API_KEY>
+export CFN_TEMPLATE=/tmp/demo/insecure-s3-bucket.yaml
+
+python3 scanner.py
+```
+
+### Fail pipeline
+
+An example of the pipeline scanner being run with the `FAIL_PIPELINE` environment variable set to `disabled`.
+
+```
+export CC_REGION=ap-southeast-2
+export CC_API_KEY=<API_KEY>
+export CFN_TEMPLATE=/tmp/demo/insecure-s3-bucket.yaml
+export FAIL_PIPELINE=disabled
+
+python3 scanner.py
+```
+
+### Fail pipeline CFN
+
+An example of the pipeline scanner being run with the `FAIL_PIPELINE_CFN` environment variable set to `enabled`. 
+
+```
+export CC_REGION=ap-southeast-2
+export CC_API_KEY=<API_KEY>
+export CFN_TEMPLATE=/tmp/demo/insecure-s3-bucket-disable-failure.yaml
+export FAIL_PIPELINE_CFN=enabled
+
+python3 scanner.py
+```
 
 # Contact
 
