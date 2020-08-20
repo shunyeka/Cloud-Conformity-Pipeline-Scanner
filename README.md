@@ -17,6 +17,8 @@ And, if necessary, the optional environment variable:
     * Options: `disabled`
   * `FAIL_PIPELINE_CFN` (default: pipeline will fail)
     * Options: `enabled`
+  * `CC_PROFILE_ID` (default: `default`)
+    * Options: Profile ID(s) found in your Conformity account     
 
 If `FAIL_PIPELINE` is `disabled`, the script **will not** fail the pipeline even if the template is deemed insecure. 
 

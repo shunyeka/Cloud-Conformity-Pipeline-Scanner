@@ -64,11 +64,14 @@ class CcValidator:
         return cfn_contents
 
     def generate_payload(self):
+        cc_profile_id = os.getenv('CC_PROFILE_ID', '')
+
         payload = {
             'data': {
                 'attributes': {
                     'type': 'cloudformation-template',
-                    'contents': self.cfn_contents
+                    'contents': self.cfn_contents,
+                    'profileId': cc_profile_id,
                 }
             }
         }
