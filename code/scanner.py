@@ -47,7 +47,7 @@ class CcValidator:
             self.offending_risk_level_num = RISK_LEVEL_NUMS[risk_level]
 
         except KeyError:
-            logging.critical("Error: Unknown risk level. Please use one of LOW | MEDIUM | HIGH | VERY_HIGH | EXTREME")
+            logging.critical("Unknown risk level. Please use one of LOW | MEDIUM | HIGH | VERY_HIGH | EXTREME")
             sys.exit(1)
 
         logging.info(
@@ -55,12 +55,9 @@ class CcValidator:
             f"issues are found"
         )
 
-        self.cfn_contents = self.read_template_file()
-        self.fail_pipeline = self._fail_pipeline()
-
     def read_template_file(self):
         if not os.path.isfile(self.cfn_template_file_location):
-            logging.critical(f"Error: Template file does not exist: {self.cfn_template_file_location}")
+            logging.critical(f"Template file does not exist: {self.cfn_template_file_location}")
             sys.exit(1)
 
         with open(self.cfn_template_file_location, "r") as f:
@@ -68,14 +65,15 @@ class CcValidator:
 
         return cfn_contents
 
-    def generate_payload(self):
+    @staticmethod
+    def generate_payload(cfn_template_contents):
         cc_profile_id = os.getenv("CC_PROFILE_ID", "")
 
         payload = {
             "data": {
                 "attributes": {
                     "type": "cloudformation-template",
-                    "contents": self.cfn_contents,
+                    "contents": cfn_template_contents,
                     "profileId": cc_profile_id,
                 }
             }
@@ -102,8 +100,7 @@ class CcValidator:
         message = resp_json.get("Message")
         if message and "deny" in message:
             logging.critical(
-                f"Error: {message}. Please ensure you've set the correct Conformity region and that your API key "
-                f"is correct"
+                f"{message}. Please ensure you've set the correct Conformity region and that your API key is correct"
             )
             sys.exit(1)
 
@@ -113,7 +110,7 @@ class CcValidator:
         offending_entries = []
 
         if findings.get("errors"):
-            logging.critical(f"Error: {findings['errors']}")
+            logging.critical(findings["errors"])
             sys.exit(1)
 
         for entry in findings["data"]:
@@ -168,7 +165,7 @@ class CcValidator:
 
             return True
 
-    def _fail_pipeline(self):
+    def _fail_pipeline(self, cfn_template_contents):
         if os.environ.get("FAIL_PIPELINE", "").lower() == "disabled":
             logging.info(
                 'The "FAIL_PIPELINE" environment variable is set to "disabled". The pipeline will not fail even if '
@@ -188,13 +185,13 @@ class CcValidator:
         template_extension = os.path.splitext(self.cfn_template_file_location)[1]
 
         if template_extension.lower() == ".json":
-            dict_template = json.loads(self.cfn_contents)
+            dict_template = json.loads(cfn_template_contents)
             fail_pipeline = self._check_fail_pipeline(dict_template)
 
             return fail_pipeline
 
         elif template_extension.lower() == ".yaml" or template_extension.lower() == ".yml":
-            dict_template = yaml.safe_load(self.cfn_contents)
+            dict_template = yaml.safe_load(cfn_template_contents)
             fail_pipeline = self._check_fail_pipeline(dict_template)
 
             return fail_pipeline
@@ -204,7 +201,8 @@ class CcValidator:
             sys.exit(1)
 
     def run(self):
-        payload = self.generate_payload()
+        cfn_template_contents = self.read_template_file()
+        payload = self.generate_payload(cfn_template_contents)
         findings = self.run_validation(payload)
         offending_entries = self.get_results(findings)
 
@@ -216,8 +214,10 @@ class CcValidator:
         json_offending_entries = json.dumps(offending_entries, indent=4, sort_keys=True)
         logging.info(f"Offending entries:\n{json_offending_entries}")
 
-        if self.fail_pipeline:
-            logging.critical(f"Error: {num_offending_entries} offending entries found")
+        fail_pipeline = self._fail_pipeline(cfn_template_contents)
+
+        if fail_pipeline:
+            logging.critical(f"{num_offending_entries} offending entries found")
             sys.exit(1)
 
         else:
