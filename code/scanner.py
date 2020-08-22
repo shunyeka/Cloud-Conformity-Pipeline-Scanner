@@ -3,6 +3,9 @@ import sys
 import requests
 import json
 import yaml
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 OUTPUT_FILE = "findings.json"
 
@@ -25,11 +28,11 @@ class CcValidator:
     def __init__(self):
 
         try:
-            print("Obtaining required environment variables...")
+            logging.info("Obtaining required environment variables...")
             self.cc_region = os.environ["CC_REGION"].lower()
 
             if self.cc_region not in CC_REGIONS:
-                print('\nError: Please ensure "CC_REGION" is set to a region which is supported by Cloud Conformity')
+                logging.error('Please ensure "CC_REGION" is set to a region which is supported by Conformity')
                 sys.exit(1)
 
             self.api_key = os.environ["CC_API_KEY"]
@@ -37,17 +40,17 @@ class CcValidator:
             risk_level = os.getenv("CC_RISK_LEVEL", "LOW").upper()
 
         except KeyError:
-            print("\nError: Please ensure all environment variables are set")
+            logging.error("Please ensure all environment variables are set")
             sys.exit(1)
 
         try:
             self.offending_risk_level_num = RISK_LEVEL_NUMS[risk_level]
 
         except KeyError:
-            print("\nError: Unknown risk level. Please use one of LOW | MEDIUM | HIGH | VERY_HIGH | EXTREME")
+            logging.critical("Error: Unknown risk level. Please use one of LOW | MEDIUM | HIGH | VERY_HIGH | EXTREME")
             sys.exit(1)
 
-        print(
+        logging.info(
             f'All environment variables were received. The pipeline will fail if any "{risk_level}" level '
             f"issues are found"
         )
@@ -57,7 +60,7 @@ class CcValidator:
 
     def read_template_file(self):
         if not os.path.isfile(self.cfn_template_file_location):
-            print(f"\nError: Template file does not exist: {self.cfn_template_file_location}")
+            logging.critical(f"Error: Template file does not exist: {self.cfn_template_file_location}")
             sys.exit(1)
 
         with open(self.cfn_template_file_location, "r") as f:
@@ -84,7 +87,7 @@ class CcValidator:
         cfn_scan_endpoint = f"https://{self.cc_region}-api.cloudconformity.com/v1/iac-scanning/scan"
 
         json_output = json.dumps(payload, indent=4, sort_keys=True)
-        # print(f'Sending the following request:\n{json_output}')
+        logging.debug(f"Sending the following request:\n{json_output}")
 
         headers = {
             "Content-Type": "application/vnd.api+json",
@@ -93,13 +96,13 @@ class CcValidator:
 
         resp = requests.post(cfn_scan_endpoint, headers=headers, data=json_output)
         resp_json = json.loads(resp.text)
-        # json_output = json.dumps(resp_json, indent=4, sort_keys=True)
-        # print(f'Received the following response:\n{json_output}')
+        json_output = json.dumps(resp_json, indent=4, sort_keys=True)
+        logging.debug(f"Received the following response:\n{json_output}")
 
         message = resp_json.get("Message")
         if message and "deny" in message:
-            print(
-                f"\nError: {message}. Please ensure you've set the correct Conformity region and that your API key"
+            logging.critical(
+                f"Error: {message}. Please ensure you've set the correct Conformity region and that your API key "
                 f"is correct"
             )
             sys.exit(1)
@@ -110,7 +113,7 @@ class CcValidator:
         offending_entries = []
 
         if findings.get("errors"):
-            print(f"Error: {findings['errors']}")
+            logging.critical(f"Error: {findings['errors']}")
             sys.exit(1)
 
         for entry in findings["data"]:
@@ -142,7 +145,7 @@ class CcValidator:
             fail_pipeline_setting = template["Parameters"]["FailConformityPipeline"]
 
         except TypeError:
-            print(
+            logging.info(
                 'The "FailConformityPipeline" parameter has not been set. The pipeline will fail if the template is '
                 "deemed insecure."
             )
@@ -150,7 +153,7 @@ class CcValidator:
             return True
 
         if fail_pipeline_setting.lower() == "disabled":
-            print(
+            logging.info(
                 'The "FailConformityPipeline" parameter has been set to "disabled". The pipeline will not fail even '
                 "if the template is deemed insecure."
             )
@@ -158,7 +161,7 @@ class CcValidator:
             return False
 
         else:
-            print(
+            logging.info(
                 'The "FailConformityPipeline" parameter was not set to "disabled". The pipeline will not fail even '
                 "if the template is deemed insecure."
             )
@@ -167,7 +170,7 @@ class CcValidator:
 
     def _fail_pipeline(self):
         if os.environ.get("FAIL_PIPELINE", "").lower() == "disabled":
-            print(
+            logging.info(
                 'The "FAIL_PIPELINE" environment variable is set to "disabled". The pipeline will not fail even if '
                 "the template is deemed insecure."
             )
@@ -177,7 +180,7 @@ class CcValidator:
         if not os.environ.get("FAIL_PIPELINE_CFN", "").lower() == "enabled":
             return True
 
-        print(
+        logging.info(
             'The "FAIL_PIPELINE_CFN" environment variable is set to "enabled". The template will be checked to see '
             "if the pipeline should fail."
         )
@@ -197,7 +200,8 @@ class CcValidator:
             return fail_pipeline
 
         else:
-            sys.exit(f"Unknown file extension for template: {template_extension}")
+            logging.critical(f"Unknown file extension for template: {template_extension}")
+            sys.exit(1)
 
     def run(self):
         payload = self.generate_payload()
@@ -205,18 +209,19 @@ class CcValidator:
         offending_entries = self.get_results(findings)
 
         if not offending_entries:
-            print("\nNo offending entries found")
+            logging.info("\nNo offending entries found")
             sys.exit()
 
         num_offending_entries = len(offending_entries)
         json_offending_entries = json.dumps(offending_entries, indent=4, sort_keys=True)
-        print(f"Offending entries:\n{json_offending_entries}")
+        logging.info(f"Offending entries:\n{json_offending_entries}")
 
         if self.fail_pipeline:
-            sys.exit(f"Error: {num_offending_entries} offending entries found")
+            logging.critical(f"Error: {num_offending_entries} offending entries found")
+            sys.exit(1)
 
         else:
-            print(
+            logging.info(
                 f"\nPipeline failure has been disabled so the script will exit with a 0 code.\n"
                 f"{num_offending_entries} offending entries found."
             )
