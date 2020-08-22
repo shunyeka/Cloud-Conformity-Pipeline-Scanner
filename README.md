@@ -63,6 +63,32 @@ export FAIL_PIPELINE_CFN=enabled
 python3 scanner.py
 ```
 
+## Dev Notes
+
+To ensure all tests pass, you must set the following environment variables:
+ 
+ * `CC_API_KEY`
+ * `CC_REGION`
+ * `CC_PROFILE_ID`
+
+Use the following command to run all tests:
+
+```
+pytest -v
+```
+
+And the following command to skip tests which call the Conformity API:
+
+```
+pytest -v -m 'not external' 
+```
+
+Use the following command to test code coverage:
+
+```
+pytest --cov=code --cov-report term-missing
+```
+
 # Contact
 
 * Blog: [oznetnerd.com](https://oznetnerd.com)

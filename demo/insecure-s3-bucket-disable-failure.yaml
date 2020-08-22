@@ -1,6 +1,6 @@
 ---
 Parameters:
-#  FailConformityPipeline: disabled
+  FailConformityPipeline: disabled
 
 Resources:
   MyS3Bucket:

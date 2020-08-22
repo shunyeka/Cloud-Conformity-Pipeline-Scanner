@@ -109,7 +109,7 @@ class CcValidator:
     def get_results(self, findings):
         offending_entries = []
 
-        if findings.get("errors"):
+        if findings.get("errors"):  # pragma: no cover
             logging.critical(findings["errors"])
             sys.exit(1)
 
@@ -126,7 +126,7 @@ class CcValidator:
                 offending_entries.append(entry)
 
         if not offending_entries:
-            return
+            return offending_entries
 
         formatted_output = json.dumps(offending_entries, sort_keys=True, indent=4)
         output = formatted_output.replace(r"\"", "")
@@ -141,7 +141,7 @@ class CcValidator:
         try:
             fail_pipeline_setting = template["Parameters"]["FailConformityPipeline"]
 
-        except TypeError:
+        except KeyError:
             logging.info(
                 'The "FailConformityPipeline" parameter has not been set. The pipeline will fail if the template is '
                 "deemed insecure."
@@ -173,7 +173,7 @@ class CcValidator:
             )
             return False
 
-        # fail pipeline if  `FAIL_PIPELINE_CFN` is not set
+        # fail pipeline if `FAIL_PIPELINE_CFN` is not set
         if not os.environ.get("FAIL_PIPELINE_CFN", "").lower() == "enabled":
             return True
 
@@ -228,10 +228,10 @@ class CcValidator:
             sys.exit()
 
 
-def main():
+def main():  # pragma: no cover
     cc = CcValidator()
     cc.run()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()
