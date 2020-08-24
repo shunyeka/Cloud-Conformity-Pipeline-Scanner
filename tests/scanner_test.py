@@ -1,6 +1,7 @@
 import os
 import json
 import pytest
+import logging
 
 from scanner import CcValidator
 
@@ -255,12 +256,27 @@ def test_fail_pipeline_template_files(monkeypatch, disabled_failed_pipeline_temp
     assert fail_pipeline is False
 
 
-# def test_fail_pipeline_invalid_template_filename(monkeypatch):
-#     """
-#     GIVEN `_fail_pipeline` is called
-#     WHEN `FAIL_PIPELINE_CFN` env var is `enabled` but an invalid filename is passed in
-#     THEN exit with an error of 1
-#     """
+def test_fail_pipeline_invalid_template_filename(caplog, monkeypatch, tmp_path):
+    """
+    GIVEN `_fail_pipeline` is called
+    WHEN `FAIL_PIPELINE_CFN` env var is `enabled` but an invalid filename is passed in
+    THEN exit with an error of 1
+    """
+    d = tmp_path / "sub"
+    d.mkdir()
+    template_file_path = d / "x.txt"
+
+    # override default valid template file path
+    monkeypatch.setenv("CFN_TEMPLATE_FILE_LOCATION", str(template_file_path))
+
+    monkeypatch.setenv("FAIL_PIPELINE_CFN", "enabled")
+
+    c = CcValidator()
+
+    with pytest.raises(SystemExit):
+        c._fail_pipeline("")
+
+    assert "Unknown file extension for template" in caplog.text
 
 
 def test_check_fail_pipeline_unset(monkeypatch, template_dir):
@@ -313,4 +329,106 @@ def test_check_fail_pipeline_invalid(monkeypatch, template_dir):
 
     c = CcValidator()
     fail_pipeline = c._check_fail_pipeline(cfn_contents)
+
     assert fail_pipeline is True
+
+
+def test_run_secure_template(caplog):
+    """
+    GIVEN a valid template is passed in
+    WHEN the template has no security issues
+    THEN exit with a code of 0
+    """
+    caplog.set_level(logging.DEBUG)
+
+    c = CcValidator()
+
+    with pytest.raises(SystemExit):
+        c.run()
+
+    assert "No offending entries found" in caplog.text
+
+
+def test_run_insecure_template(caplog, monkeypatch, template_dir):
+    """
+    GIVEN a valid template is passed in
+    WHEN the template has security issues
+    THEN exit with an error code of 1 and the failing rules
+    """
+
+    insecure_file_path = f"{template_dir}/insecure-s3-bucket.json"
+
+    monkeypatch.setenv("CFN_TEMPLATE_FILE_LOCATION", insecure_file_path)
+
+    c = CcValidator()
+
+    with pytest.raises(SystemExit):
+        c.run()
+
+    assert "offending entries found" in caplog.text
+
+
+def test_run_insecure_template_fail_pipeline_disabled(caplog, monkeypatch, template_dir):
+    """
+    GIVEN a valid template is passed in
+    WHEN the template has security issues but the `FAIL_PIPELINE` environment variable is set to "disabled"
+    THEN exit with a code of 0 and the failing rules
+    """
+    caplog.set_level(logging.INFO)
+
+    insecure_file_path = f"{template_dir}/insecure-s3-bucket.json"
+
+    monkeypatch.setenv("FAIL_PIPELINE", "disabled")
+    monkeypatch.setenv("CFN_TEMPLATE_FILE_LOCATION", insecure_file_path)
+    print(insecure_file_path)
+
+    c = CcValidator()
+
+    with pytest.raises(SystemExit):
+        c.run()
+
+    assert "Pipeline failure has been disabled" in caplog.text
+
+
+def test_run_insecure_template_fail_pipeline_cfn_disabled(caplog, monkeypatch, template_dir):
+    """
+    GIVEN a valid template is passed in
+    WHEN the template has security issues but the `FAIL_PIPELINE_CFN` env var is `enabled` and the `FailConformityPipeline` CFN param is `disabled`
+    THEN exit with a code of 0 and the failing rules
+    """
+    caplog.set_level(logging.INFO)
+
+    insecure_file_path = f"{template_dir}/insecure-s3-bucket-disable-failure.json"
+
+    monkeypatch.setenv("FAIL_PIPELINE_CFN", "enabled")
+    monkeypatch.setenv("CFN_TEMPLATE_FILE_LOCATION", insecure_file_path)
+    print(insecure_file_path)
+
+    c = CcValidator()
+
+    with pytest.raises(SystemExit):
+        c.run()
+
+    assert "Pipeline failure has been disabled" in caplog.text
+
+
+def test_run_insecure_template_fail_pipeline_enabled_cfn_disabled(caplog, monkeypatch, template_dir):
+    """
+    GIVEN a valid template is passed in
+    WHEN the template has security issues and the `FAIL_PIPELINE_CFN` env var is `enabled` but the `FailConformityPipeline` CFN param is `disabled`
+    THEN exit with an error of 1 and the failing rules
+    """
+    caplog.set_level(logging.INFO)
+
+    insecure_file_path = f"{template_dir}/insecure-s3-bucket-disable-failure.json"
+
+    monkeypatch.setenv("FAIL_PIPELINE_CFN", "disabled")
+    monkeypatch.setenv("CFN_TEMPLATE_FILE_LOCATION", insecure_file_path)
+    print(insecure_file_path)
+
+    c = CcValidator()
+
+    with pytest.raises(SystemExit):
+        c.run()
+
+    assert "offending entries found" in caplog.text

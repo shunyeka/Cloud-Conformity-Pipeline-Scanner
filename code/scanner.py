@@ -207,7 +207,7 @@ class CcValidator:
         offending_entries = self.get_results(findings)
 
         if not offending_entries:
-            logging.info("\nNo offending entries found")
+            logging.info("No offending entries found")
             sys.exit()
 
         num_offending_entries = len(offending_entries)
