@@ -333,6 +333,7 @@ def test_check_fail_pipeline_invalid(monkeypatch, template_dir):
     assert fail_pipeline is True
 
 
+@pytest.mark.external
 def test_run_secure_template(caplog):
     """
     GIVEN a valid template is passed in
@@ -349,6 +350,7 @@ def test_run_secure_template(caplog):
     assert "No offending entries found" in caplog.text
 
 
+@pytest.mark.external
 def test_run_insecure_template(caplog, monkeypatch, template_dir):
     """
     GIVEN a valid template is passed in
@@ -368,6 +370,7 @@ def test_run_insecure_template(caplog, monkeypatch, template_dir):
     assert "offending entries found" in caplog.text
 
 
+@pytest.mark.external
 def test_run_insecure_template_fail_pipeline_disabled(caplog, monkeypatch, template_dir):
     """
     GIVEN a valid template is passed in
@@ -390,6 +393,7 @@ def test_run_insecure_template_fail_pipeline_disabled(caplog, monkeypatch, templ
     assert "Pipeline failure has been disabled" in caplog.text
 
 
+@pytest.mark.external
 def test_run_insecure_template_fail_pipeline_cfn_disabled(caplog, monkeypatch, template_dir):
     """
     GIVEN a valid template is passed in
@@ -412,6 +416,7 @@ def test_run_insecure_template_fail_pipeline_cfn_disabled(caplog, monkeypatch, t
     assert "Pipeline failure has been disabled" in caplog.text
 
 
+@pytest.mark.external
 def test_run_insecure_template_fail_pipeline_enabled_cfn_disabled(caplog, monkeypatch, template_dir):
     """
     GIVEN a valid template is passed in
