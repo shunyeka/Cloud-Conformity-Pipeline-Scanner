@@ -6,7 +6,7 @@ import pytest
 CWD = os.path.dirname(os.path.realpath(__file__))
 PATH = Path(CWD)
 PARENT_DIR = PATH.parent
-APP_DIR = f"{PARENT_DIR}/code"
+APP_DIR = f"{PARENT_DIR}/src"
 TEMPLATE_DIR = f"{PARENT_DIR}/demo"
 sys.path.insert(0, APP_DIR)
 
