@@ -1,60 +1,35 @@
-{
-    "Resources": {
-        "MyS3Bucket": {
-            "Type": "AWS::S3::Bucket",
-            "Properties": {
-                "BucketName": "demo-bucket",
-                "LoggingConfiguration": {
-                    "DestinationBucketName": "demo-log-bucket",
-                    "LogFilePrefix": "demo"
-                },
-                "AccelerateConfiguration": {
-                    "AccelerationStatus": "Enabled"
-                },
-                "VersioningConfiguration": {
-                    "Status": "Enabled"
-                },
-                "BucketEncryption": {
-                    "ServerSideEncryptionConfiguration": [
-                        {
-                            "ServerSideEncryptionByDefault": {
-                                "SSEAlgorithm": "AES256"
-                            }
-                        }
-                    ]
-                },
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "MyS3Bucket"
-                    }
-                ]
-            }
-        },
-        "SecureBucketPolicy": {
-            "Type": "AWS::S3::BucketPolicy",
-            "Properties": {
-                "Bucket": {
-                    "Ref": "MyS3Bucket"
-                },
-                "PolicyDocument": {
-                    "Statement": [
-                        {
-                            "Effect": "Deny",
-                            "Principal": "*",
-                            "Action": "*",
-                            "Resource": {
-                                "Fn::Sub": "arn:aws:s3:::${MyS3Bucket}/*"
-                            },
-                            "Condition": {
-                                "Bool": {
-                                    "aws:SecureTransport": "false"
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
-        }
-    }
-}
+---
+Resources:
+  MyS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: demo-bucket
+      LoggingConfiguration:
+        DestinationBucketName: demo-log-bucket
+        LogFilePrefix: demo
+      AccelerateConfiguration:
+        AccelerationStatus: Enabled
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      Tags:
+      - Key: Name
+        Value: MyS3Bucket
+  SecureBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: MyS3Bucket
+      PolicyDocument:
+        Statement:
+        - Effect: Deny
+          Principal: "*"
+          Action: "*"
+          Resource:
+            Fn::Sub: arn:aws:s3:::${MyS3Bucket}/*
+          Condition:
+            Bool:
+              aws:SecureTransport: 'false'
