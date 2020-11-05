@@ -1,0 +1,70 @@
+pipeline {
+   agent any
+   environment {
+        CC_REGION = "us-west-2"
+        CC_API_KEY = "4wvPjvtNR4GyCJKWR7dyUh64jPurfdGt2nnNMYCyGxtCL2dUkfaW35wkdmWpfU8B"
+        CC_RISK_LEVEL = "HIGH"
+        FAIL_PIPELINE = "disabled"
+    }
+    stages {
+        stage('Checkout') { // for display purposes
+           steps{
+                checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/OzNetNerd/Cloud-Conformity-Pipeline-Scanner.git']]])
+                echo "Cloning Source Code from github is Done"
+            }
+        }
+        stage('Scanning Template') { // for display purposes
+           steps{
+               script {
+                sh "rm -rf ./findings.json"
+                sh label: '', script: '''
+                FILES=$(find . -type f \\( -name "*.yml" -o -name "*.yaml" \\))
+                echo ${FILES}
+                if [ -z "$FILES" ]
+                then
+                    echo "There is no YAML files in the mentioned directory"
+                else
+                    echo "found some YAML files"
+                    for file in ${FILES}; do
+                        echo ${file}
+                        if grep -- "---" ${file}; ##note the space after the string you are searching for
+                        then
+                            echo "Hooray!!It's available"
+                            export CFN_TEMPLATE_FILE_LOCATION
+                            CFN_TEMPLATE_FILE_LOCATION="${JENKINS_HOME}/workspace/${JOB_BASE_NAME}/${file}"
+                            /usr/bin/python3 ${JENKINS_HOME}/workspace/${JOB_BASE_NAME}/src/scanner.py
+                        else
+                            echo "Oops!!This is not CloudFormation file"
+                        fi
+                    done
+                    
+                fi
+                '''
+                sh label: '', script: '''
+                FILES=$(find . -type f -name "*.json")
+                echo ${FILES}
+                if [ -z "$FILES" ]
+                then
+                    echo "There is no JSON files in the mentioned directory"
+                else
+                    echo "found some JSON files"
+                    for file in ${FILES}; do
+                        echo ${file}
+                        if grep -q AWS:: ${file}; ##note the space after the string you are searching for
+                        then
+                            echo "Hooray!!It's available"
+                            export CFN_TEMPLATE_FILE_LOCATION
+                            CFN_TEMPLATE_FILE_LOCATION="${JENKINS_HOME}/workspace/${JOB_BASE_NAME}/${file}"
+                            /usr/bin/python3 ${JENKINS_HOME}/workspace/${JOB_BASE_NAME}/src/scanner.py
+                        else
+                            echo "Oops!!This is not CloudFormation file"
+                        fi
+                    done
+                fi
+                '''
+                echo "CloudFormation Template Scanning Completed"
+               }
+            }
+        }
+    }
+}
